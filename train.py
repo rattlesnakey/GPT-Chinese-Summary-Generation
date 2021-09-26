@@ -176,16 +176,18 @@ def calculate_loss_and_accuracy(outputs, labels, device):
     :param device:
     :return:
     """
+    # 这里outputs取0就是batch_size, seq_len, vocab_size
     logits = outputs[0]  # 每个token用来预测下一个token的prediction_score,维度:[batch_size,token_len,voca_size]
     # 用前n-1个token，预测出第n个token
     # 用第i个token的prediction_score用来预测第i+1个token。
     # 假定有input有n个token，则shift_logits表示model中第[0,n-2]个token的prediction_score，shift_labels表示第[1，n-1]的label
     shift_logits = logits[..., :-1, :].contiguous()
+    # labels就input_ids，id刚好就是对应vocab里面的每个类别
     shift_labels = labels[..., 1:].contiguous().to(device)
 
     loss_fct = CrossEntropyLoss(ignore_index=pad_id, reduction='sum')  # 忽略pad_id的loss,并对所有的非pad_id的loss进行求和
-    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)),
-                    shift_labels.view(-1))
+    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), # batch_size * seq_len, vocab_size
+                    shift_labels.view(-1)) # vocab_size * seq_len, 1
 
     _, preds = shift_logits.max(dim=-1)  # preds表示对应的prediction_score预测出的token在voca中的id。维度为[batch_size,token_len]
 
@@ -296,6 +298,7 @@ def train(model, device, train_list, dev_list, multi_gpu, args):
     best_dev_acc = -1
     dev_acc_list = []
     # 开始训练
+    es = 0
     for epoch in range(args.epochs):
         epoch_start_time = datetime.now()
         train_loss, train_accuracy = train_fn(model, device, epoch, train_dataloader, optimizer, scheduler, multi_gpu, args)
@@ -336,7 +339,7 @@ def evaluate(model, device, test_list, multi_gpu, args):
     model.eval()
     logger.info('starting evaluating')
     test_dataset = MyDataset(test_list)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                                 collate_fn=collate_fn,drop_last=True)
     with torch.no_grad():
         for batch_idx, input_ids in enumerate(test_dataloader):

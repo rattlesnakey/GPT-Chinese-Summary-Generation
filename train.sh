@@ -47,5 +47,6 @@ python -u train.py \
     --seed $seed \
     --num_workers $num_workers \
     --patience $patience
+    --model_config 
 
 
