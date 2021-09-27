@@ -110,10 +110,12 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')
 
 # 可能得用这个来进行测试看rouge值是多少了
 
-def get_summary(text):
+def get_summary(text, model, tokenizer, device, args):
     # text = input("请输入一个文章:")
     #for i in range(5): # 会尝试生成5次
-    if len(text) : text = text[:1000]
+    if len(text) > 600:
+        text = text[:500]
+    
     input_ids = [tokenizer.cls_token_id]  # 每个input以[CLS]为开头
     input_ids.extend(tokenizer.encode(text))
     input_ids.append(tokenizer.sep_token_id)
@@ -140,13 +142,11 @@ def get_summary(text):
         curr_input_tensor = torch.cat((curr_input_tensor, next_token), dim=0)
 
     text = tokenizer.convert_ids_to_tokens(generated)
-    logger.info("summary:" + "".join(text))
+    return "".join(text)
+    # logger.info("summary:" + "".join(text))
 
         # except Exception:
         #     continue
-
-def get_summary(text):
-    pass
 if __name__ == '__main__':
     args = set_interact_args()
     logger = create_logger(args)
@@ -165,8 +165,8 @@ if __name__ == '__main__':
     # text = text = """原告郑祥旭诉被告尹德乐、第三人敦化市黄泥河镇新开道村村民委员会（以下简称新开道村村委会）侵权责任纠纷一案，本院于2017年8月2日立案后，依法适用普通程序，公开开庭进行了审理。现要求：一、被告将原告耕地恢复原状并赔偿经济损失1万元；二、我建房的场地是一片空地，没有任何植被，而且我在村内居住40年，未见任何人耕种过此涝洼地；三、原告名下0.038公顷的道南地已经退耕还林，根本不存在我盖房占用的事实。新开道村村委会述称，原告诉请中的0.038公顷道南地据村里档案记载，已经退耕还林。本案中，原告向本院提供的《土地承包使用期合同》中涉案地即“道南地”并无登记四至，且据本院向敦化市黄泥河镇经营管理站调查了解，该地块亦无原始的四至记载。根据庭审时第三人陈述，该地块的四至中的西至位置尚不明确，故无法证实现有四至的存在，亦无法推断出被告房屋侵占该地块的事实，且第三人村委会予以证实该地块已退耕还林；其次，根据本院查明的事实，被告房屋建于2014年，建设时的空地上并无任何植被，且经第三人证实该地块当时的状态为“抛弃地”，并非耕地，原告主张之所以将该地块荒废是准备种植人参“养地”的说法亦无事实依据。依据《中华人民共和国侵权责任法》第六条；《中华人民共和国民事诉讼法》第六十四条第一款、第一百四十二条之规定，判决如下：驳回原告郑祥旭的诉讼请求。"""
     while True:
         doc = input('请输入文章:')
-        summary = get_summary(doc)
+        summary = get_summary(doc, model, tokenizer, device, args)
         print()
-        print(summary)
+        logger.info("summary:" + summary)
         print()
         print()

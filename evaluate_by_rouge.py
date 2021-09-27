@@ -3,8 +3,11 @@ from rouge import Rouge
 from dataset import MyDataset
 from transformers.modeling_gpt2 import GPT2Config, GPT2LMHeadModel
 from transformers import BertTokenizer
-from argparse import ArgumentParser
+import argparse
+from tqdm import tqdm 
+import json
 import os
+import torch
 os.environ['CUDA_VISIBLE_DEVICES']='0'
 PAD = '[PAD]'
 pad_id = 0
@@ -102,11 +105,13 @@ def main():
     model, n_ctx = create_model(args, vocab_size)
     model.to(device)
 # **********************above is old version, which is not acceptable ******************************
-
+from interact import top_k_top_p_filtering
+from interact import create_logger
+from interact import get_summary
 
 def set_evaluate_args():
     """
-    Sets up the training arguments.
+    Sets up the evaluate arguments.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', default='0,1', type=str, required=False, help='生成设备')
@@ -125,13 +130,47 @@ def set_evaluate_args():
     parser.add_argument('--max_len', type=int, default=512, help='每个utterance的最大长度,超过指定长度则进行截断')
     parser.add_argument('--max_history_len', type=int, default=1, help="dialogue history的最大长度")
     parser.add_argument('--no_cuda', default=False, help='不使用GPU进行预测')
-    parser.add_argu
+    parser.add_argument('--test_data_path', help='the path of test data path')
     return parser.parse_args()
+
+def process_summay(pred_summary, label_summary):
+    return [' '.join(list(pred_summary)), ' '.join(list(label_summary))]
+
+def get_rouge(test_data_path, model, tokenizer, device, args):
+    total_rouge_1, total_rouge_2, total_rouge_l, count = 0, 0, 0, 0
+    for line in tqdm(open(test_data_path, 'r')):
+        try:
+            cur_json = json.loads(line)
+            pred_sumary = get_summary(cur_json['document'], model, tokenizer, device, args)
+            label_summary = cur_json['summary']
+            cur_result = metric.get_scores(*process_summay(pred_sumary, label_summary))[0]
+            total_rouge_1 += cur_result['rouge-1']['f'] * 100
+            total_rouge_2 += cur_result['rouge-2']['f'] * 100
+            total_rouge_l += cur_result['rouge-l']['f'] * 100
+            count += 1
+        except Exception:
+            continue
+
+    logger.info(f'valid count:{count}')
+    logger.info(f'rouge1:{total_rouge_1 / (count)}, rouge2:{total_rouge_2 / (count)}, rougel:{total_rouge_l / (count)}')
+        
+
+
+    
+
 if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument('--vocab_path', type=str, help='the path of vocab')
-    parser.add_argument('--batch_size', type=int, help='batch size')
-    args = parser.parse_args()
+    args = set_evaluate_args()
+    logger = create_logger(args)
+    args.cuda = torch.cuda.is_available() and not args.no_cuda
+    device = 'cuda' if args.cuda else 'cpu'
+    # device = 'cpu'
+    logger.info('using device:{}'.format(device))
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.device
+    tokenizer = BertTokenizer(vocab_file=args.voca_path)
+    model = GPT2LMHeadModel.from_pretrained(args.summary_model_path)
+    model.to(device)
+    model.eval()
+    logger.info(args)
+    print('***********************evaluate start************************')
     metric = Rouge()
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    pass
+    get_rouge(args.test_data_path, model, tokenizer, device, args)
