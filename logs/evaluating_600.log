@@ -1,4 +1,0 @@
-2021-09-27 10:30:22,812 - INFO - using device:cuda
-2021-09-27 10:30:30,276 - INFO - Namespace(cuda=True, device='3,4', log_path='logs/evaluating_600.log', max_history_len=1, max_len=512, model_config='/home/zhy2018/projects/abstract_gpt/GPT2_NLPCC_Summary/config.json', no_cuda=False, repetition_penalty=1.0, save_samples_path='sample/', seed=42, summary_model_path='/home/zhy2018/projects/abstract_gpt/LAW_Summary_models/min_ppl_model', temperature=1, test_data_path='/home/zhy2018/projects/abstract_gpt/data/test.json', topk=8, topp=0, voca_path='vocabulary/vocab_NLPCC.txt')
-2021-09-27 10:39:40,450 - INFO - valid count:116
-2021-09-27 10:39:40,450 - INFO - rouge1:55.99856545498045, rouge2:38.22027787082642, rougel:48.78499566082493
